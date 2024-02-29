@@ -1,0 +1,12 @@
+# Vi
+*.swp
+
+test*.*
+test
+.history*
+
+# client auth for vmc
+clients.json
+variables.json
+.ignore_gitlab-report.csv
+mail.content

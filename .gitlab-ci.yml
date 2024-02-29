@@ -1,0 +1,47 @@
+variables:
+  GIT_STRATEGY: clone
+  REPORT_FILE: "gitlab-report.csv"
+  MAILTO: "mailto@recipient.name.anything"
+  MAILSUBJECT: "EXPIRING GITLAB TOKEN REPORT - ${CI_JOB_STARTED_AT}"
+
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "trigger"'
+
+after_script:
+  - rm -rf .ignore_gitlab-report.csv
+
+stages:
+  - create_gitlab_report
+  - commit_files_to_this_repo
+  - trigger_mail
+
+create_gitlab_report:
+  stage: create_gitlab_report
+  script:
+    - bash ./gitlab-report.sh
+  artifacts:
+    paths:
+      - ${REPORT_FILE}
+      - mail.content
+
+commit_files_to_this_repo:
+    stage: commit_files_to_this_repo
+    script:
+        - git config --global user.email "mailto@recipient.name.anything"
+        - git config --global user.name "Gitlab Runner (CI/CD)"
+        - git add .
+        - git commit -am "Adding new files through CI/CD pipeline" || echo "No changes, nothing to commit!"
+        - git push "https://${COMMIT_TOKEN_NAME}:${COMMIT_TOKEN}@${CI_REPOSITORY_URL#*@}" HEAD:${CI_COMMIT_REF_NAME}
+
+trigger_mail:
+  stage: trigger_mail
+  script: 
+    - |
+      if test -f "mail.content"; then
+        #send_mail_via_custom_command
+      fi
+  needs:
+    - "create_gitlab_report"
